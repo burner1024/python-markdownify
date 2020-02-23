@@ -59,6 +59,11 @@ class MarkdownConverter(object):
     def process_tag(self, node, children_only=False):
         text = ''
 
+        # Clean newline-only textnodes outside <pre>
+        for el in node.children:
+            if node.name != 'pre' and isinstance(el, NavigableString) and six.text_type(el) == '\n':
+                el.extract()
+
         # Convert the children first
         for el in node.children:
             if isinstance(el, NavigableString):
@@ -76,7 +81,7 @@ class MarkdownConverter(object):
 
     def process_text(self, text, keep_whitespaces=False):
         if keep_whitespaces:
-            return escape(text or '')
+            return text
         return escape(whitespace_re.sub(' ', text or ''))
 
     def __getattr__(self, attr):
@@ -185,7 +190,15 @@ class MarkdownConverter(object):
         return '%s\n\n' % text if text else ''
 
     def convert_pre(self, el, text):
-        return '```%s\n```\n' % text if text else ''
+        if text:
+            text = text.rstrip()
+            if text[0] != '\n':
+                text = '\n' + text
+            if text[-1] != '\n':
+                text =  text + '\n'
+            return '```{}```\n'.format(text)
+        else:
+            return ''
 
     def convert_s(self, el, text):
         return self.convert_del(el, text)
